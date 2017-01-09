@@ -24,8 +24,8 @@ public class MazeSolver {
 	private static int NUMBER_OF_BLOCKS = 80;
 	
 	// increase the maze size and the number of blocks and 
-	// you may have to increase the population and number of genes
-	private static int POPULATION = 5000;
+	// you may have to increase the evolution stream limit and number of genes
+	private static int EVOLUTION_STREAM_LIMIT = 5000;
 	// high number of genes may lead to not best solutions
 	private static int NUMBER_OF_GENES = (MAZE_WIDTH + MAZE_HEIGHT) * 2;
 
@@ -34,13 +34,8 @@ public class MazeSolver {
 	static Maze maze;
 
 	public static void main(String[] args) {
-		// change the number of blocks to find a faster solution.
-		// if you want a really big maze with a high number of blocks you must
-		// increase the cromosome size (number of genes) and the population
-		maze = new Maze(MAZE_WIDTH, MAZE_HEIGHT, NUMBER_OF_BLOCKS);
 
-		// each gene is a direction - you may want to increase the number of
-		// genes
+		maze = new Maze(MAZE_WIDTH, MAZE_HEIGHT, NUMBER_OF_BLOCKS);
 
 		AnyChromosome<Direction> chromosome = AnyChromosome.of(MazeSolver::generateRandomDirection, NUMBER_OF_GENES);
 
@@ -51,8 +46,7 @@ public class MazeSolver {
 				.offspringSelector(new RouletteWheelSelector<>()).build();
 
 		System.out.println(" == FINAL DIRECTIONS==");
-		// you may want to increase the population if you increase the maze size
-		Genotype<AnyGene<Direction>> result = engine.stream().limit(POPULATION)
+		Genotype<AnyGene<Direction>> result = engine.stream().limit(EVOLUTION_STREAM_LIMIT)
 				.collect(EvolutionResult.toBestGenotype());
 
 		maze.printMaze(getDirectionsFromChromosome(result.getChromosome()));

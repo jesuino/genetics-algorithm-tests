@@ -15,5 +15,10 @@
 			<artifactId>jenetics</artifactId>
 			<version>3.7.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.fxapps.drawingfx</groupId>
+			<artifactId>drawing-fx</artifactId>
+			<version>1.0</version>
+		</dependency>
 	</dependencies>
 </project>

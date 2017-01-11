@@ -1,7 +1,6 @@
 package org.fxapps.genetics;
 
 import java.util.Random;
-
 import org.jenetics.AnyChromosome;
 import org.jenetics.AnyGene;
 import org.jenetics.Genotype;

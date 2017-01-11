@@ -1,7 +1,6 @@
 package org.fxapps.genetics;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jenetics.Genotype;
 import org.jenetics.LongChromosome;
 import org.jenetics.LongGene;
@@ -16,10 +15,9 @@ import org.jenetics.util.Factory;
  * @author wsiqueir
  *
  */
-public class LongAlgoritimsSum {
+public class LargestDigitSum {
 
-	// 2.) Definition of the fitness function.
-	private static Integer eval(Genotype<LongGene> lt) {
+	private static Integer fitness(Genotype<LongGene> lt) {
 		LongChromosome lc = lt.getChromosome().as(LongChromosome.class);
 
 		AtomicInteger sum = new AtomicInteger(0);
@@ -34,16 +32,9 @@ public class LongAlgoritimsSum {
 	}
 
 	public static void main(String[] args) {
-		// 1.) Define the genotype (factory) suitable
-		// for the problem.
 		Factory<Genotype<LongGene>> gtf = Genotype.of(LongChromosome.of(1, 100, 3));
-		// 3.) Create the execution environment.
-		Engine<LongGene, Integer> engine = Engine.builder(LongAlgoritimsSum::eval, gtf).build();
-
-		// 4.) Start the execution (evolution) and
-		// collect the result.
+		Engine<LongGene, Integer> engine = Engine.builder(LargestDigitSum::fitness, gtf).build();
 		Genotype<LongGene> result = engine.stream().limit(10).collect(EvolutionResult.toBestGenotype());
-
-		System.out.println("Selected: " + result +  ". Sum: " + eval(result));
+		System.out.println("Selected: " + result +  ". Sum: " + fitness(result));
 	}
 }

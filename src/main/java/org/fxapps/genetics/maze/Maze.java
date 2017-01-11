@@ -33,7 +33,7 @@ public class Maze {
 	}
 
 	public Maze(int width, int height, int numberOfBlocks) {
-		this(width, height, width -1, height / 2, 0);
+		this(width, height, width -1, height / 2, numberOfBlocks);
 	}
 	
 	public Maze(int width, int height, int targetX, int targetY, int numberOfBlocks) {
@@ -148,6 +148,38 @@ public class Maze {
 		return positions;
 	}
 
+
+	@Override
+	public String toString() {
+		return "Maze [width=" + width + ", height=" + height + ", targetX=" + targetX + ", targetY=" + targetY
+				+ ", numberOfBlocks=" + numberOfBlocks + "]";
+	}
+
+	private int[][] generateRandomBlocks(int numberOfBlocks) {
+		int[][] blocks = new int[numberOfBlocks][2];
+		Random r = new Random();
+		for (int i = 0; i < blocks.length; i++) {
+			int x = r.nextInt(width);
+			int y = r.nextInt(height);
+			// won't allow the block to hide the target, ok?
+			if (x == targetX && y == targetY) {
+				x = y = 0;
+			}
+			blocks[i][0] = x;
+			blocks[i][1] = y;
+		}
+		return blocks;
+	}
+
+	private boolean hitABlock(int x, int y) {
+		for (int i = 0; i < blocks.length; i++) {
+			if (x == blocks[i][0] && y == blocks[i][1]) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public int getWidth() {
 		return width;
 	}
@@ -191,37 +223,6 @@ public class Maze {
 
 	public int getNumberOfBlocks() {
 		return numberOfBlocks;
-	}
-
-	@Override
-	public String toString() {
-		return "Maze [width=" + width + ", height=" + height + ", targetX=" + targetX + ", targetY=" + targetY
-				+ ", numberOfBlocks=" + numberOfBlocks + "]";
-	}
-
-	private int[][] generateRandomBlocks(int numberOfBlocks) {
-		int[][] blocks = new int[numberOfBlocks][2];
-		Random r = new Random();
-		for (int i = 0; i < blocks.length; i++) {
-			int x = r.nextInt(width);
-			int y = r.nextInt(height);
-			// won't allow the block to hide the target, ok?
-			if (x == targetX && y == targetY) {
-				x = y = 0;
-			}
-			blocks[i][0] = x;
-			blocks[i][1] = y;
-		}
-		return blocks;
-	}
-
-	private boolean hitABlock(int x, int y) {
-		for (int i = 0; i < blocks.length; i++) {
-			if (x == blocks[i][0] && y == blocks[i][1]) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 }

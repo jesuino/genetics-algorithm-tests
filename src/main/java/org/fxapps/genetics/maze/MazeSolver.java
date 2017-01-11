@@ -1,12 +1,10 @@
 package org.fxapps.genetics.maze;
 
-import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.jenetics.AnyChromosome;
 import org.jenetics.AnyGene;
+import org.jenetics.Chromosome;
 import org.jenetics.Genotype;
 import org.jenetics.RouletteWheelSelector;
 import org.jenetics.engine.Engine;
@@ -29,27 +27,20 @@ public class MazeSolver {
 		this.maze = maze;
 	}
 
-	public Genotype<AnyGene<Direction>> newGenotype(int numberOfGenes, int numberOfChromosomes) {
-		int randomBase = numberOfGenes - numberOfGenes / 10;
-		List<AnyChromosome<Direction>> chromosomes = IntStream.range(0, numberOfChromosomes)
-				.map(i -> numberOfGenes - random.nextInt(randomBase))
-				.mapToObj(i -> AnyChromosome.of(this::generateRandomDirection, i))
-				.collect(Collectors.toList());
-		return Genotype.of(chromosomes);
-	}
 
 	public Genotype<AnyGene<Direction>> newGenotype(int numberOfGenes) {
 		return Genotype.of(AnyChromosome.of(this::generateRandomDirection, numberOfGenes));
 	}
 
-	public Direction[] evolveToDirections(Genotype<AnyGene<Direction>> genotype, int limit) {
-		Genotype<AnyGene<Direction>> result = evolveToGenotype(genotype, limit);
-		return Utils.getDirections(result.getChromosome());
+	public Direction[] evolveToDirections(Genotype<AnyGene<Direction>> genotype, int limit, int population) {
+		Genotype<AnyGene<Direction>> result = evolveToGenotype(genotype, limit, population);
+		return getDirections(result.getChromosome());
 	}
 
-	public Genotype<AnyGene<Direction>> evolveToGenotype(Genotype<AnyGene<Direction>> genotype, int limit) {
+	public Genotype<AnyGene<Direction>> evolveToGenotype(Genotype<AnyGene<Direction>> genotype, int limit, int population) {
 		final Engine<AnyGene<Direction>, Integer> engine = Engine.builder(this::fitness, genotype)
 				.offspringSelector(new RouletteWheelSelector<>())
+				.populationSize(population)
 				.build();
 		return engine.stream().limit(limit).collect(EvolutionResult.toBestGenotype());
 	}
@@ -62,7 +53,7 @@ public class MazeSolver {
 
 	private Integer fitness(Genotype<AnyGene<Direction>> dir) {
 		int sum = 0;
-		Direction[] directions = Utils.getDirections(dir.getChromosome());
+		Direction[] directions = getDirections(dir.getChromosome());
 		MazeWalkingInfo info = maze.getInfoForDirections(directions);
 		sum -= info.getStepsToReachTarget();
 		sum -= info.getSteps();
@@ -72,6 +63,18 @@ public class MazeSolver {
 		}
 		return sum;
 
+	}
+	
+	public static Direction[] getDirections(Genotype<AnyGene<Direction>> genotype) {
+		return getDirections(genotype.getChromosome());
+	}
+
+	public static Direction[] getDirections(Chromosome<AnyGene<Direction>> chromosome) {
+		Direction[] directions = new Direction[chromosome.length()];
+		for (int i = 0; i < directions.length; i++) {
+			directions[i] = chromosome.getGene(i).getAllele();
+		}
+		return directions;
 	}
 
 }

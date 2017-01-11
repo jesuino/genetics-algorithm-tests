@@ -1,16 +1,12 @@
 package org.fxapps.genetics.mazefx;
 
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.fxapps.drawingfx.DrawingApp;
 import org.fxapps.genetics.maze.Direction;
 import org.fxapps.genetics.maze.Maze;
 import org.fxapps.genetics.maze.MazeSolver;
-import org.fxapps.genetics.maze.Utils;
 import org.jenetics.AnyGene;
 import org.jenetics.Genotype;
 
@@ -52,7 +48,7 @@ public class MazeFXApp extends DrawingApp {
 
 	// UI elements
 	private Spinner<Integer> spGenes;
-	private Spinner<Integer> spChromosomes;
+	private Slider slPopulation;
 	private Slider slBlocks;
 	private Slider slWidth;
 	private Slider slHeight;
@@ -63,8 +59,6 @@ public class MazeFXApp extends DrawingApp {
 	private boolean mustDrawMaze = false;
 	private SimpleIntegerProperty currentPos = new SimpleIntegerProperty(0);
 	private SimpleIntegerProperty positionsLengthProperty = new SimpleIntegerProperty(0);
-	private int currentChromosome = 0;
-	private List<Color> visitedStroke;
 
 	// data retrieved from current maze
 	private int[][] positions;
@@ -106,7 +100,6 @@ public class MazeFXApp extends DrawingApp {
 				double lastMazeY = rectHeight * lastY;
 				ctx.setFill(VISITED);
 				ctx.fillRect(lastMazeX, lastMazeY, rectWidth, rectHeight);
-				ctx.setStroke(visitedStroke.get(currentChromosome - 1));
 				ctx.strokeRect(lastMazeX, lastMazeY, rectWidth, rectHeight);
 				ctx.setFill(Color.WHITE);
 				ctx.setFont(Font.font((rectWidth + rectHeight) / 6));
@@ -134,10 +127,6 @@ public class MazeFXApp extends DrawingApp {
 			}
 			currentPos.set(currentPos.get() + 1);
 		}
-		if (currentPos.get() >= positions.length && currentChromosome < lastGenotype.length()) {
-			getDataForCurrentChromosome();
-		}
-
 	}
 
 	private void drawMaze(double rectWidth, double rectHeight) {
@@ -166,8 +155,10 @@ public class MazeFXApp extends DrawingApp {
 		lblLogTitle.setFont(fontTitle);
 
 		spGenes = new Spinner<>(1, 15, 3);
-		spChromosomes = new Spinner<>(1, 10, 1);
-
+		
+		slPopulation = new Slider(20, 400, 50);
+		VBox vbPopulation = paneWithInfoLabel(slPopulation);
+		
 		slWidth = new Slider(10, MAX_MAZE_WIDTH, 20);
 		VBox vbWidth = paneWithInfoLabel(slWidth);
 
@@ -175,16 +166,11 @@ public class MazeFXApp extends DrawingApp {
 		VBox vbHeight = paneWithInfoLabel(slHeight);
 
 		slBlocks = new Slider(0, (MAX_MAZE_WIDTH + MAX_MAZE_HEIGHT * 8), 20);
-		slBlocks.setBlockIncrement(1);
 		VBox vbBlocks = paneWithInfoLabel(slBlocks);
 
 		slGenerations = new Slider(10, 15000, 200);
 		slGenerations.setPrefWidth(220);
-		Label lblGenerations = new Label();
-		lblGenerations.textProperty()
-				.bind(new SimpleStringProperty("(").concat(slGenerations.valueProperty().asString("%.0f")).concat(")"));
-		VBox vbGenerations = new VBox(slGenerations, lblGenerations);
-		vbGenerations.setAlignment(Pos.CENTER);
+		VBox vbGenerations = paneWithInfoLabel(slGenerations);
 
 		GridPane gpMazeConfig = new GridPane();
 		gpMazeConfig.setVgap(5);
@@ -201,8 +187,8 @@ public class MazeFXApp extends DrawingApp {
 		gpMazeConfig.add(new Label("Genes Multiplier"), 2, 0);
 		gpMazeConfig.add(spGenes, 3, 0);
 
-		gpMazeConfig.add(new Label("Chromosomes"), 2, 1);
-		gpMazeConfig.add(spChromosomes, 3, 1);
+		gpMazeConfig.add(new Label("Population"), 2, 1);
+		gpMazeConfig.add(vbPopulation, 3, 1);
 
 		Button btnNewMaze = new Button("New Maze");
 		gpMazeConfig.add(btnNewMaze, 2, 2);
@@ -247,21 +233,22 @@ public class MazeFXApp extends DrawingApp {
 
 	private VBox paneWithInfoLabel(Slider sl) {
 		Label lblHeight = new Label();
-		lblHeight.textProperty()
-				.bind(new SimpleStringProperty("(").concat(sl.valueProperty().asString("%.0f")).concat(")"));
 		VBox vbHeight = new VBox(0, sl, lblHeight);
+		lblHeight.textProperty()
+		.bind(new SimpleStringProperty("(").concat(sl.valueProperty().asString("%.0f")).concat(")"));
+		sl.setBlockIncrement(1);
 		vbHeight.setAlignment(Pos.CENTER);
 		return vbHeight;
 	}
 
 	private void stopAnimation() {
-		currentChromosome = lastGenotype.length();
 		currentPos.set(positions.length);
 	}
 
 	private void replay() {
 		mustDrawMaze = true;
-		currentChromosome = 0;
+		currentPos.set(0);
+		positionsLengthProperty.set(positions.length);
 	}
 
 	private void startEvolution() {
@@ -270,14 +257,14 @@ public class MazeFXApp extends DrawingApp {
 		log("Running evolution for " + generation + " generations.");
 		solving.set(true);
 		doAsyncWork(() -> {
-			lastGenotype = solver.evolveToGenotype(lastGenotype, generation);
+			lastGenotype = solver.evolveToGenotype(lastGenotype, generation, (int) slPopulation.getValue());
 			return null;
 
 		}, v -> {
 			log("Finished evolution in " + (System.currentTimeMillis() - milis) + " miliseconds.");
 			solving.set(false);
-			currentChromosome = 0;
-			getDataForCurrentChromosome();
+			retrieveValuesFromGenotype();
+			currentPos.set(0);
 		}, (str) -> {
 			System.err.println(str);
 		});
@@ -299,26 +286,18 @@ public class MazeFXApp extends DrawingApp {
 		int w = new Double(slWidth.getValue()).intValue();
 		int h = new Double(slHeight.getValue()).intValue();
 		totalGenes = (w + h) * spGenes.getValue();
-		Integer totalChromosomes = spChromosomes.getValue();
-		lastGenotype = solver.newGenotype(totalGenes, totalChromosomes);
-		visitedStroke = IntStream.range(1, totalChromosomes + 1).mapToObj(i -> Color.grayRgb(255 / i))
-				.collect(Collectors.toList());
-		mustDrawMaze = true;
-		currentChromosome = 0;
-		getDataForCurrentChromosome();
+		lastGenotype = solver.newGenotype(totalGenes);
+		retrieveValuesFromGenotype();
 	}
 
-	public void getDataForCurrentChromosome() {
-		log("Now playing chromosome " + currentChromosome);
-		directions = Utils.getDirections(lastGenotype.getChromosome(currentChromosome));
+	private void retrieveValuesFromGenotype() {
+		directions = MazeSolver.getDirections(lastGenotype);
 		positions = maze.getPositions(directions);
-		currentPos.set(0);
 		positionsLengthProperty.set(positions.length);
-		// checking again ;)
-		if (currentChromosome < lastGenotype.length()) {
-			currentChromosome++;
-		}
+		currentPos.set(0);
+		mustDrawMaze = true;
 	}
+
 
 	private void log(String log) {
 		txtLog.setText(log + "\n" + txtLog.getText());
